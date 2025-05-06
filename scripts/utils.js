@@ -75,6 +75,16 @@ const samePropertyRuns = function(codePointProperties) {
 	return result;
 };
 
+const stripUnderscore = (text) => text.replace(/_/g, " ");
+
+const getCategoryName = (category, subType) => {
+	let categoryName = stripUnderscore(category);
+	if (!/(Class|Category)$/.test(category)) {
+		categoryName += ' category'
+	}
+	return `${categoryName} of “${stripUnderscore(subType)}”`;
+}
+
 const writeFiles = function(options) {
 	const version = options.version;
 	const subType = options.subType;
@@ -153,8 +163,8 @@ const writeFiles = function(options) {
 			fs.writeFileSync(
 				path.resolve(dir, 'index.d.ts'),
 				type === 'Sequence_Property'
-					? `const data: string[];\nexport default data;`
-					: `const aliasMap: Record<number, string[]>;\nexport default aliasMap;`
+					? `declare const data: string[];\nexport default data;`
+					: `declare const aliasMap: Record<number, string[]>;\nexport default aliasMap;`
 			);
 			return;
 		}
@@ -178,7 +188,11 @@ const writeFiles = function(options) {
 			);
 			fs.writeFileSync(
 				path.resolve(dir, 'regex.d.ts'),
-				'declare const regex: RegExp;\nexport default regex;'
+				[
+					`/** A regular expression that matches any symbol in the ${getCategoryName(type, subdir)}. */`,
+					'declare const regex: RegExp;',
+					'export default regex;'
+				].join('\n')
 			);
 			if (codePointsSizeLt(codePoints, 10)) {
 				const codePointsAsArray = codePoints instanceof regenerate ? codePoints.toArray() : codePoints;
@@ -205,7 +219,11 @@ const writeFiles = function(options) {
 		);
 		fs.writeFileSync(
 			path.resolve(dir, 'code-points.d.ts'),
-			`declare const codePoints: number[];\nexport default codePoints;`
+			[
+				`/** Array of code points in the ${getCategoryName(type, subdir)}. */`,
+				`declare const codePoints: number[];`,
+				`export default codePoints;`
+			].join('\n')
 		);
 		fs.writeFileSync(
 			path.resolve(dir, 'symbols.js'),
@@ -213,7 +231,10 @@ const writeFiles = function(options) {
 		);
 		fs.writeFileSync(
 			path.resolve(dir, 'symbols.d.ts'),
-			`declare const symbols: string[];\nexport default symbols;`
+			[
+				`/** Array of symbols (strings) in ${getCategoryName(type, subdir)}. */`,
+				`declare const symbols: string[];\nexport default symbols;`
+			].join('\n')
 		);
 	});
 	if (options.type == 'Bidi_Mirroring_Glyph') {
@@ -241,7 +262,7 @@ const writeFiles = function(options) {
 		);
 		fs.writeFileSync(
 			path.resolve(dir, 'index.d.ts'),
-			`const data: Map<number, string>;\nexport default data;`
+			`declare const data: Map<number, string>;\nexport default data;`
 		);
 	} else {
 		Object.keys(auxMap).forEach(function(type) {
@@ -262,7 +283,13 @@ const writeFiles = function(options) {
 				flatRuns
 			)})`;
 			fs.writeFileSync(path.resolve(dir, "index.js"), output);
-			fs.writeFileSync(path.resolve(dir, "index.d.ts"), `declare const map: Map<number, string>;\nexport default map;`);
+			fs.writeFileSync(
+				path.resolve(dir, "index.d.ts"),
+				[
+					`/** Map from code point to ${stripUnderscore(type)} name. */`,
+					'declare const map: Map<number, string>;',
+					'export default map;'
+				].join('\n'));
 		});
 	}
 	return dirMap;

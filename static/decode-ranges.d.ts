@@ -1,4 +1,4 @@
-class UnicodeRange {
+declare class UnicodeRange {
     readonly begin: number;
     readonly end: number;
     readonly length: number;
